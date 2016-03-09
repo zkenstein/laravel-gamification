@@ -54,15 +54,15 @@ The MIT License (MIT). Please see [License File](LICENSE.md) for more informatio
 
 [ico-version]: https://img.shields.io/packagist/v/pbmedia/laravel-gamification.svg?style=flat-square
 [ico-license]: https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square
-[ico-travis]: https://img.shields.io/travis/pbmedia/laravel-gamification/master.svg?style=flat-square
-[ico-scrutinizer]: https://img.shields.io/scrutinizer/coverage/g/pbmedia/laravel-gamification.svg?style=flat-square
-[ico-code-quality]: https://img.shields.io/scrutinizer/g/pbmedia/laravel-gamification.svg?style=flat-square
+[ico-travis]: https://img.shields.io/travis/pascalbaljetmedia/laravel-gamification/master.svg?style=flat-square
+[ico-scrutinizer]: https://img.shields.io/scrutinizer/coverage/g/pascalbaljetmedia/laravel-gamification.svg?style=flat-square
+[ico-code-quality]: https://img.shields.io/scrutinizer/g/pascalbaljetmedia/laravel-gamification.svg?style=flat-square
 [ico-downloads]: https://img.shields.io/packagist/dt/pbmedia/laravel-gamification.svg?style=flat-square
 
 [link-packagist]: https://packagist.org/packages/pbmedia/laravel-gamification
-[link-travis]: https://travis-ci.org/pbmedia/laravel-gamification
-[link-scrutinizer]: https://scrutinizer-ci.com/g/pbmedia/laravel-gamification/code-structure
-[link-code-quality]: https://scrutinizer-ci.com/g/pbmedia/laravel-gamification
+[link-travis]: https://travis-ci.org/pascalbaljetmedia/laravel-gamification
+[link-scrutinizer]: https://scrutinizer-ci.com/g/pascalbaljetmedia/laravel-gamification/code-structure
+[link-code-quality]: https://scrutinizer-ci.com/g/pascalbaljetmedia/laravel-gamification
 [link-downloads]: https://packagist.org/packages/pbmedia/laravel-gamification
 [link-author]: https://github.com/pascalbaljet
 [link-contributors]: ../../contributors
