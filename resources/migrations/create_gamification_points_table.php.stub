@@ -12,7 +12,7 @@ class CreateGamificationPointsTable extends Migration
             $table->increments('id');
             $table->morphs('earner');
             $table->morphs('rewarder');
-            $table->morphs('items');
+            $table->morphs('item');
             $table->integer('points');
             $table->timestamps();
         });

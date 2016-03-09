@@ -1,16 +1,14 @@
 <?php
 
-namespace Pbmedia\Gamification;
+namespace Pbmedia\Gamification\Services;
 
-use Pbmedia\Gamification\Events\PointsHasBeenRewarderdEvent;
-use Pbmedia\Gamification\Exceptions\EarnerIsNotFilledException;
-use Pbmedia\Gamification\Exceptions\ItemIsNotFilledException;
-use Pbmedia\Gamification\Exceptions\PointsAreNotFilledException;
-use Pbmedia\Gamification\Exceptions\RewarderHasNotEnoughPointsException;
-use Pbmedia\Gamification\Exceptions\RewarderIsNotFilledException;
-use Pbmedia\Gamification\Interfaces\CanEarnPointsInterface;
-use Pbmedia\Gamification\Interfaces\CanRewardPointsInterface;
-use Pbmedia\Gamification\Interfaces\HasLimitedPointsToRewardInterface;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Event;
+use Pbmedia\Gamification\Events;
+use Pbmedia\Gamification\Exceptions;
+use Pbmedia\Gamification\Interfaces;
 use Pbmedia\Gamification\Models\PointsModel;
 
 class PointsService
@@ -25,31 +23,33 @@ class PointsService
 
     protected $pointsModel;
 
-    public function __construct(PointsModel $pointsModel)
+    public function __construct(PointsModel $pointsModel = null)
     {
-        $this->pointsModel = $pointsModel;
+        if ($pointsModel) {
+            $this->pointsModel = $pointsModel;
 
-        $this->setEarner($pointsModel->earner);
-        $this->setRewarder($pointsModel->rewarder);
-        $this->setItem($pointsModel->item);
-        $this->setPoints($pointsModel->points);
+            $this->setEarner($pointsModel->earner);
+            $this->setRewarder($pointsModel->rewarder);
+            $this->setItem($pointsModel->item);
+            $this->setPoints($pointsModel->points);
+        }
     }
 
-    public function setEarner(CanEarnPointsInterface $earner)
+    public function setEarner(Interfaces\CanEarnPointsInterface $earner)
     {
         $this->earner = $earner;
 
         return $this;
     }
 
-    public function setRewarder(CanRewardPointsInterface $rewarder)
+    public function setRewarder(Interfaces\CanRewardPointsInterface $rewarder)
     {
         $this->rewarder = $rewarder;
 
         return $this;
     }
 
-    public function setItem($item)
+    public function setItem(Model $item)
     {
         $this->item = $item;
 
@@ -63,22 +63,27 @@ class PointsService
         return $this;
     }
 
+    public function getPointsModel()
+    {
+        return $this->pointsModel;
+    }
+
     public function checkIfModelAttributesAreFilled()
     {
         if (!$this->earner) {
-            throw new EarnerIsNotFilledException;
+            throw new Exceptions\EarnerIsNotFilledException;
         }
 
         if (!$this->rewarder) {
-            throw new RewarderIsNotFilledException;
+            throw new Exceptions\RewarderIsNotFilledException;
         }
 
         if (!$this->item) {
-            throw new ItemIsNotFilledException;
+            throw new Exceptions\ItemIsNotFilledException;
         }
 
         if (!$this->points) {
-            throw new PointsAreNotFilledException;
+            throw new Exceptions\PointsAreNotFilledException;
         }
     }
 
@@ -86,12 +91,16 @@ class PointsService
     {
         $this->checkIfModelAttributesAreFilled();
 
-        if (!$this->checkIfRewarderHasEnoughPoints()) {
-            throw new RewarderHasNotEnoughPointsException();
+        if (!$this->rewarderHasEnoughPoints()) {
+            throw new Exceptions\RewarderHasNotEnoughPointsException;
         }
+
+        $pointsToSubtractFromRewarder = $this->points;
 
         if (!$this->pointsModel) {
             $this->pointsModel = new PointsModel;
+        } else {
+            $pointsToSubtractFromRewarder += $this->pointsModel->points * -1;
         }
 
         $this->pointsModel->fill([
@@ -104,81 +113,99 @@ class PointsService
             'points'        => $this->points,
         ]);
 
-        if ($this->pointsModel->exists) {
-            $this->pointsModel->update();
-        } else {
-            $this->pointsModel->save();
-            Event::fire(new PointsHasBeenRewarderdEvent($pointsModel));
+        $this->pointsModel->save();
+        $this->subtractPointsFromRewarder($pointsToSubtractFromRewarder);
+
+        if ($this->pointsModel->wasRecentlyCreated) {
+            Event::fire(new Events\PointsHasBeenRewarderdEvent($this->pointsModel));
         }
+
+        $this->pointsModel = $this->pointsModel->fresh();
+
+        return $this;
     }
 
-    public function find()
+    public function find(): Collection
     {
-        return $this->getQuery()->get();
+        return $this->getBuilder()->get();
     }
 
-    protected function getQuery()
+    public function getTotalPoints(): int
     {
-        $query = PointsModel::getQuery();
+        return $this->getBuilder()->sum('points');
+    }
+
+    protected function getBuilder(): Builder
+    {
+        $builder = PointsModel::query();
 
         if ($this->earner) {
-            $query->where('earner_id', $this->earner->getKey())
+            $builder->where('earner_id', $this->earner->getKey())
                 ->where('earner_type', $this->earner->getMorphClass());
         }
 
         if ($this->rewarder) {
-            $query->where('rewarder_id', $this->rewarder->getKey())
+            $builder->where('rewarder_id', $this->rewarder->getKey())
                 ->where('rewarder_type', $this->rewarder->getMorphClass());
         }
 
         if ($this->item) {
-            $query->where('item_id', $this->item->getKey())
+            $builder->where('item_id', $this->item->getKey())
                 ->where('item_type', $this->item->getMorphClass());
         }
 
         if ($this->points) {
-            $query->where('points', $this->points);
+            $builder->where('points', $this->points);
         }
 
-        return $query->get();
+        return $builder;
     }
 
-    public function delete()
+    public function delete(): Collection
     {
         return $this->find()->each(function ($pointsModel) {
-            $pointsModel->delete();
-            Event::fire(new PointsHasBeenDeletedEvent($pointsModel));
-        });
-    }
-
-    public function deleteAndRollbackRewardersPoints()
-    {
-        return $this->delete()->each(function ($pointsModel) {
             $rewarder = $pointsModel->rewarder;
 
-            if (!$rewarder instanceof HasLimitedPointsToRewardInterface) {
-                return;
+            $pointsModel->delete();
+
+            if ($rewarder instanceof Interfaces\HasLimitedPointsToRewardInterface) {
+                $rewarder->addPointsToReward($pointsModel->points);
             }
 
-            $rewarder->addPointsToReward($pointsModel->points);
+            Event::fire(new Events\PointsHasBeenDeletedEvent($pointsModel));
         });
     }
 
     protected function rewarderHasEnoughPoints(): bool
     {
-        if (!$this->rewarder instanceof HasLimitedPointsToRewardInterface) {
+        if (!$this->rewarder instanceof Interfaces\HasLimitedPointsToRewardInterface) {
             return true;
         }
 
         return $this->rewarder->getTotalPointsToRewardLeft() >= $this->points;
     }
 
-    public static function getTotalRewardedPointsByRewarder(CanRewardPointsInterface $rewarder)
+    protected function subtractPointsFromRewarder(int $pointsToSubtract): bool
     {
-        $pointsService = new static;
+        if (!$this->rewarder instanceof Interfaces\HasLimitedPointsToRewardInterface) {
+            return true;
+        }
 
-        $query = $pointsService->setRewarder($rewarder)->getQuery();
+        return $this->rewarder->addPointsToReward($pointsToSubtract * -1);
+    }
 
-        return $query->sum('points');
+    public static function getTotalEarnedPointsByEarner(Interfaces\CanEarnPointsInterface $earned): int
+    {
+        return (new static )->setEarner($earned)->getTotalPoints();
+    }
+
+    public static function getTotalEarnedPointsByItem(Model $item): int
+    {
+        return (new static )->setItem($item)->getTotalPoints();
+    }
+
+    public static function getTotalRewardedPointsByRewarder(Interfaces\CanRewardPointsInterface $rewarder): int
+    {
+        return (new static )->setRewarder($rewarder)->getTotalPoints();
     }
 }

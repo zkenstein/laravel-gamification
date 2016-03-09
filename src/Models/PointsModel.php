@@ -24,16 +24,16 @@ class PointsModel extends Model
 
     public function earner()
     {
-        return $this->morph();
+        return $this->morphTo();
     }
 
     public function rewarder()
     {
-        return $this->morph();
+        return $this->morphTo();
     }
 
     public function item()
     {
-        return $this->morph();
+        return $this->morphTo();
     }
 }

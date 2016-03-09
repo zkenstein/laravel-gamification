@@ -7,5 +7,5 @@ use Pbmedia\Gamification\Interfaces\CanEarnPointsInterface;
 
 class EarnerModel extends Model implements CanEarnPointsInterface
 {
-
+    protected $table = 'earners';
 }
