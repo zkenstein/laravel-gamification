@@ -28,12 +28,12 @@
     },
     "autoload": {
         "psr-4": {
-            "pbmedia\\laravel-gamification\\": "src"
+            "Pbmedia\Gamification\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "pbmedia\\laravel-gamification\\Test\\": "tests"
+            "Pbmedia\Gamification\\Tests\\": "tests"
         }
     },
     "scripts": {
