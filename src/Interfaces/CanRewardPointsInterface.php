@@ -1,6 +1,6 @@
 <?php
 
-namespace Pbmedia\Gamification;
+namespace Pbmedia\Gamification\Interfaces;
 
 interface CanRewardPointsInterface
 {
