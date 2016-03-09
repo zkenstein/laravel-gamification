@@ -114,6 +114,11 @@ class PointsService
 
     public function find()
     {
+        return $this->getQuery()->get();
+    }
+
+    protected function getQuery()
+    {
         $query = PointsModel::getQuery();
 
         if ($this->earner) {
@@ -166,5 +171,14 @@ class PointsService
         }
 
         return $this->rewarder->getTotalPointsToRewardLeft() >= $this->points;
+    }
+
+    public static function getTotalRewardedPointsByRewarder(CanRewardPointsInterface $rewarder)
+    {
+        $pointsService = new static;
+
+        $query = $pointsService->setRewarder($rewarder)->getQuery();
+
+        return $query->sum('points');
     }
 }
